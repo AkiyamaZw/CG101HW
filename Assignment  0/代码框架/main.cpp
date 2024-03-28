@@ -45,11 +45,22 @@ int main(){
     // matrix multiply vector i * v
 
 
-    /* 
+    /*
     * PA 0
     */
     // TO DO: Define point P
     // TO DO: Define rotation matrix M
     // TO DO: M * P
+
+    // 1. define point p
+    Eigen::Vector3f P(2.0f, 1.0f, 1.0f);
+    // 2. define transform
+    Eigen::Matrix3f trans;
+    float radian = 45 * 3.14 / 180;
+    trans << cos(radian), -sin(radian), 1, sin(radian), cos(radian), 2, 0, 0, 1;
+    // calculate result;
+    Eigen::Vector3f result;
+    result = trans * P;
+    std::cout << result << std::endl;
     return 0;
 }
