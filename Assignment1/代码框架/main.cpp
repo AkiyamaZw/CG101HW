@@ -1,8 +1,12 @@
 #include "Triangle.hpp"
+#include "eigen3/Eigen/src/Core/Matrix.h"
+#include "eigen3/Eigen/src/Core/util/Constants.h"
 #include "rasterizer.hpp"
 #include <eigen3/Eigen/Eigen>
+#include <filesystem>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+
 
 constexpr double MY_PI = 3.1415926;
 
@@ -26,7 +30,12 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     // TODO: Implement this function
     // Create the model matrix for rotating the triangle around the Z axis.
     // Then return it.
+    float radians = rotation_angle * 3.14 / 180;
 
+    model << cos(radians), -sin(radians), 0, 0,
+    sin(radians), cos(radians), 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1;
     return model;
 }
 
@@ -40,7 +49,36 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     // TODO: Implement this function
     // Create the projection matrix for the given parameters.
     // Then return it.
+    float fov_radius = eye_fov * 3.14 / 180.f;
+    float n = -zNear;
+    float f = -zFar;
+    float t = tan(fov_radius / 2) * zNear;
+    float b = -t;
+    float r = t * aspect_ratio;
+    float l = -r;
 
+    // Eigen::Matrix4f orth;
+    // orth << 2 / (r - l), 0,       0,          -(l+r)/(r-l),
+    //               0,           2/(t-b), 0,          -(t+b)/ (t-b),
+    //               0,           0,       2/(n - f), -(n+f)/(n - f),
+    //               0,           0,       0,           1;
+
+    Eigen::Matrix4f trans, scale, pesp;
+    trans << 1, 0, 0, -(r+l)/2,
+             0, 1, 0, -(t+b)/2,
+             0, 0, 1, -(n+f)/2,
+             0, 0, 0, 1;
+    scale << 2/(r-l), 0, 0, 0,
+            0, 2/(t-b),0, 0,
+            0, 0, 2/(n-f), 0,
+            0, 0, 0, 1;
+
+    pesp << n, 0, 0, 0,
+    0, n, 0, 0,
+    0, 0, n+f, -n * f,
+    0, 0, 1, 0;
+
+    projection = scale * trans * pesp * projection;
     return projection;
 }
 
@@ -50,16 +88,17 @@ int main(int argc, const char** argv)
     bool command_line = false;
     std::string filename = "output.png";
 
+
     if (argc >= 3) {
         command_line = true;
         angle = std::stof(argv[2]); // -r by default
         if (argc == 4) {
             filename = std::string(argv[3]);
         }
-        else
-            return 0;
+        // else
+        //     return 0;
     }
-
+    std::string save_path = std::filesystem::current_path().string() + "/" + filename;
     rst::rasterizer r(700, 700);
 
     Eigen::Vector3f eye_pos = {0, 0, 5};
@@ -85,7 +124,8 @@ int main(int argc, const char** argv)
         cv::Mat image(700, 700, CV_32FC3, r.frame_buffer().data());
         image.convertTo(image, CV_8UC3, 1.0f);
 
-        cv::imwrite(filename, image);
+        std::cout << "save to " << save_path << std::endl;
+        cv::imwrite(save_path, image);
 
         return 0;
     }
