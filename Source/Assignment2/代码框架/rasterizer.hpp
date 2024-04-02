@@ -91,6 +91,9 @@ namespace rst
         std::map<int, std::vector<Eigen::Vector3f>> col_buf;
 
         std::vector<Eigen::Vector3f> frame_buf;
+        // for msaa 2x2
+        std::vector<Eigen::Vector3f> frame_buf_msaa;
+        std::vector<float> depth_buf_msaa;
 
         std::vector<float> depth_buf;
         int get_index(int x, int y);
