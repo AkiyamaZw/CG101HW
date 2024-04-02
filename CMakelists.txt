@@ -1,14 +1,18 @@
 cmake_minimum_required (VERSION 3.6)
-project(Games101hw)
+project(CG101hw)
 
+set(CMAKE_CXX_STANDARD 17)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
-## eigen
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/3rd
-)
+set(CONFIG_PATH "${CMAKE_SOURCE_DIR}/cmake")
+set(EXTERN_PATH "${CMAKE_SOURCE_DIR}/3rd")
+
+if(MSVC)
+add_compile_options("/source-charset:utf-8")
+endif()
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/3rd")
-add_subdirectory("${CMAKE_SOURCE_DIR}/Assignment  0/代码框架")
-add_subdirectory("${CMAKE_SOURCE_DIR}/Assignment1/代码框架")
+add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment  0/代码框架")
+add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment1/代码框架")
+add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment2/代码框架")

@@ -1,2 +1,2 @@
-
-
+LIST(APPEND CMAKE_MODULE_PATH "${EXTERN_PATH}/eigen3")
+add_subdirectory("${EXTERN_PATH}/eigen3")
