@@ -174,10 +174,8 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
         int index = get_index(x, y) * 4;
         const float depth_max = std::numeric_limits<float>::infinity();
         float min_depth = depth_max;
-        int pass_count = 0;
-        const int sample_count = 4;
 
-        for(int i =0; i< 2; ++i)
+        for(int i = 0; i< 2; ++i)
         {
             idx_x = steps_x[i] + x;
             for(int j = 0; j < 2; ++j)
@@ -185,21 +183,22 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
                 idx_y = steps_y[j] + y;
                 if(insideTriangle(idx_x, idx_y, t.v)){
                     float new_z = calc_interpolated_z(idx_x, idx_y);
-                    int buff_index = index+i+j;
+                    int buff_index = index + i * 2 + j;
                     if(new_z < depth_buf_msaa[buff_index])
                     {
                         depth_buf_msaa[buff_index] = new_z;
-                        frame_buf_msaa[buff_index] = t.getColor() / 4;
-                        min_depth = new_z < min_depth ? new_z: min_depth;
-                        ++pass_count;
+                        frame_buf_msaa[buff_index] = t.getColor();
+                        if(new_z < min_depth)
+                        {
+                            min_depth = new_z;
+                        }
                     }
                 }
-
             }
         }
-        if(pass_count != 0){
-            Vector3f color = frame_buf_msaa[index] + frame_buf_msaa[index+1] + frame_buf_msaa[index+2]+ frame_buf_msaa[index+3];
-            update_depth_and_color(x, y, min_depth, color, false);
+        if(min_depth != depth_max){
+            Vector3f color = frame_buf_msaa[index] + frame_buf_msaa[index+1] + frame_buf_msaa[index+2] + frame_buf_msaa[index+3];
+            update_depth_and_color(x, y, min_depth, 0.25f * color, false);
         }
     };
 

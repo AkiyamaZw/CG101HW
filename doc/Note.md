@@ -9,8 +9,8 @@
   * 没有比较特殊的问题。
 
 ## 作业2
-> 图示: 图1没有使用MSAA,有明显锯齿；图2错误的MSAA，未记录子像素颜色和深度，有黑边；图3, MSAA, 锯齿缓解，无黑边。
-![没有supersampling](./hw2.png "没有supersampling"){:height="25%" width="25%"} ![MSAA但有黑边](./hw2withblackbounder.png "MSAA但有黑边"){:height="25%" width="25%"} ![MSAA正常](./hw2massright.png "正常情况"){:height="25%" width="25%"}
+> <img src="./hw2.png" width = "25%" height = "25%" alt="没有MSAA" align=center />&emsp;<img src="./hw2withblackbounder.png" width = "25%" height = "25%" alt="MSAA但有黑边" align=center />&emsp;<img src="./hw2massright.png" width = "25%" height = "25%" alt="MSAA正常" align=center />
+图示: 图1没有使用MSAA,有明显锯齿；图2错误的MSAA，未记录子像素颜色和深度，有黑边；图3, MSAA, 锯齿缓解，无黑边。
 
 
 1. 画出来的两个三角形堆叠先后与效果图相反?
