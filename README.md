@@ -13,4 +13,6 @@ Go to the root directory of the repository，and input the following command on 
 
 All the executable file will be compiled and placed under the "bin" folder. That's all, just enjoy the Computer Graphic tutorial.
 
+## Summary Note
+* [📖 ticky note](./doc/Note.md) records some traps of CG Homework I met.
 

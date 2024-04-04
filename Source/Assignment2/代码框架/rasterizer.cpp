@@ -135,11 +135,16 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     //z_interpolated *= w_reciprocal;
 
     // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-    auto update_depth_and_color = [this](int x, int y, float test_depth, const Vector3f& color){
+    auto update_depth_and_color = [this](int x, int y, float test_depth, const Vector3f& color, bool update_color_with_depth_check=true){
         int index = get_index(x, y);
         if(test_depth < depth_buf[index])
         {
             depth_buf[index] = test_depth;
+            if(update_color_with_depth_check)
+                set_pixel({x*1.0f, y*1.0f, test_depth}, color);
+        }
+        if(!update_color_with_depth_check)
+        {
             set_pixel({x*1.0f, y*1.0f, test_depth}, color);
         }
     };
@@ -167,7 +172,10 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
         float steps_y[2] = {0.25f, 0.75f};
         float idx_x = x , idx_y = y;
         int index = get_index(x, y) * 4;
-        float min_depth = std::numeric_limits<float>::infinity();
+        const float depth_max = std::numeric_limits<float>::infinity();
+        float min_depth = depth_max;
+        int pass_count = 0;
+        const int sample_count = 4;
 
         for(int i =0; i< 2; ++i)
         {
@@ -183,15 +191,16 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
                         depth_buf_msaa[buff_index] = new_z;
                         frame_buf_msaa[buff_index] = t.getColor() / 4;
                         min_depth = new_z < min_depth ? new_z: min_depth;
+                        ++pass_count;
                     }
                 }
 
             }
         }
-
-        Vector3f color = frame_buf_msaa[index] + frame_buf_msaa[index+1] + frame_buf_msaa[index+2]+ frame_buf_msaa[index+3];
-        update_depth_and_color(x, y, min_depth, color);
-
+        if(pass_count != 0){
+            Vector3f color = frame_buf_msaa[index] + frame_buf_msaa[index+1] + frame_buf_msaa[index+2]+ frame_buf_msaa[index+3];
+            update_depth_and_color(x, y, min_depth, color, false);
+        }
     };
 
     bool msaa_enable = true;
