@@ -10,7 +10,7 @@
 
 ## 作业2
 > <img src="./hw2.png" width = "25%" height = "25%" alt="没有MSAA" align=center />&emsp;<img src="./hw2withblackbounder.png" width = "25%" height = "25%" alt="MSAA但有黑边" align=center />&emsp;<img src="./hw2massright.png" width = "25%" height = "25%" alt="MSAA正常" align=center /><p>
-图示: 图1没有使用MSAA,有明显锯齿；图2错误的MSAA，未记录子像素颜色和深度，有黑边；图3, MSAA, 锯齿缓解，无黑边。
+图示: 图1没有使用MSAA,有明显锯齿；图2错误的MSAA，有黑边；图3, MSAA, 锯齿缓解，无黑边。(ps.原图查看明显)
 
 
 1. 画出来的两个三角形堆叠先后与效果图相反?
