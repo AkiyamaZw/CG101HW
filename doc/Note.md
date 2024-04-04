@@ -9,7 +9,7 @@
   * 没有比较特殊的问题。
 
 ## 作业2
-> <img src="./hw2.png" width = "25%" height = "25%" alt="没有MSAA" align=center />&emsp;<img src="./hw2withblackbounder.png" width = "25%" height = "25%" alt="MSAA但有黑边" align=center />&emsp;<img src="./hw2massright.png" width = "25%" height = "25%" alt="MSAA正常" align=center />
+> <img src="./hw2.png" width = "25%" height = "25%" alt="没有MSAA" align=center />&emsp;<img src="./hw2withblackbounder.png" width = "25%" height = "25%" alt="MSAA但有黑边" align=center />&emsp;<img src="./hw2massright.png" width = "25%" height = "25%" alt="MSAA正常" align=center /><p>
 图示: 图1没有使用MSAA,有明显锯齿；图2错误的MSAA，未记录子像素颜色和深度，有黑边；图3, MSAA, 锯齿缓解，无黑边。
 
 
