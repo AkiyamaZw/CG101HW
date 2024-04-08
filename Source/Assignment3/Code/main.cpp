@@ -1,12 +1,14 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-
+#include "HW3.h"
 #include "global.hpp"
 #include "rasterizer.hpp"
 #include "Triangle.hpp"
 #include "Shader.hpp"
 #include "Texture.hpp"
 #include "OBJ_Loader.h"
+#include <filesystem>
+#include <cmath>
 
 Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
 {
@@ -62,7 +64,7 @@ Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();;
     Eigen::Matrix4f orth;
     orth << 2 / (r - l), 0,       0,          -(l+r)/(r-l),
                   0,           2/(t-b), 0,          -(t+b)/ (t-b),
-                  0,           0,       2/(n - f), -(n+f)/(n - f),
+                  0,           0,       -2/(n - f), -(n+f)/(n - f),
                   0,           0,       0,           1;
 
     Eigen::Matrix4f pesp;
@@ -71,14 +73,7 @@ Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();;
     0, 0, n+f, -n * f,
     0, 0, 1, 0;
 
-    // since this hw use +positive value to define distance to the screen.
-    // last hw x = -0.2, y = -0.3, x is closer to the screen.
-    // this hw x = -0.2, y = -0.3, distance(x) = ax + b, a is positive, so y is close to the screen. There is a conflict.
-    // so, make an extra operator for matching the origin defination, that is reflection transform.
-    Eigen::Matrix4f reflect_trans = Eigen::Matrix4f::Identity();
-    reflect_trans << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0,1;
-
-    projection =  reflect_trans * orth * pesp;
+    projection =  orth * pesp;
     return projection;
 }
 
@@ -113,6 +108,7 @@ Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload& payload)
     if (payload.texture)
     {
         // TODO: Get the texture value at the texture coordinates of the current fragment
+        return_color = payload.texture->getColor(payload.tex_coords.x(), payload.tex_coords.y());
 
     }
     Eigen::Vector3f texture_color;
@@ -141,6 +137,16 @@ Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload& payload)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // components are. Then, accumulate that result on the *result_color* object.
+        Eigen::Vector3f l = light.position - point;
+        Eigen::Vector3f v = eye_pos - point;
+        Eigen::Vector3f h = (l + v).normalized();
+        // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
+        // components are. Then, accumulate that result on the *result_color* object.
+        auto aimbient = ka.cwiseProduct(amb_light_intensity);
+        auto diffuse = kd.cwiseProduct(light.intensity / l.dot(l))* std::max(0.f, l.normalized().dot(normal.normalized()));
+        auto specular = ks.cwiseProduct(light.intensity / l.dot(l)) * std::powf(std::max(0.f, h.dot(normal.normalized())), p);
+
+        result_color += aimbient + diffuse + specular;
 
     }
 
@@ -169,9 +175,16 @@ Eigen::Vector3f phong_fragment_shader(const fragment_shader_payload& payload)
     Eigen::Vector3f result_color = {0, 0, 0};
     for (auto& light : lights)
     {
+        Eigen::Vector3f l = light.position - point;
+        Eigen::Vector3f v = eye_pos - point;
+        Eigen::Vector3f h = (l + v).normalized();
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // components are. Then, accumulate that result on the *result_color* object.
+        auto aimbient = ka.cwiseProduct(amb_light_intensity);
+        auto diffuse = kd.cwiseProduct(light.intensity / l.dot(l))* std::max(0.f, l.normalized().dot(normal.normalized()));
+        auto specular = ks.cwiseProduct(light.intensity / l.dot(l)) * std::powf(std::max(0.f, h.dot(normal.normalized())), p);
 
+        result_color += aimbient + diffuse + specular;
     }
 
     return result_color * 255.f;
@@ -269,17 +282,22 @@ Eigen::Vector3f bump_fragment_shader(const fragment_shader_payload& payload)
 
 int main(int argc, const char** argv)
 {
+
+
     std::vector<Triangle*> TriangleList;
 
     float angle = 140.0;
     bool command_line = false;
 
-    std::string filename = "output.png";
+    const std::string source_dir = SOURCE_DIR;
+    std::string save_path = OUT_DIR;
+
+    std::string filename = save_path + "/" + "output.png";
     objl::Loader Loader;
-    std::string obj_path = "../models/spot/";
+    std::string obj_path = source_dir + "/models/spot/";
 
     // Load .obj File
-    bool loadout = Loader.LoadFile("../models/spot/spot_triangulated_good.obj");
+    bool loadout = Loader.LoadFile(source_dir + "/models/spot/spot_triangulated_good.obj");
     for(auto mesh:Loader.LoadedMeshes)
     {
         for(int i=0;i<mesh.Vertices.size();i+=3)
@@ -305,7 +323,7 @@ int main(int argc, const char** argv)
     if (argc >= 2)
     {
         command_line = true;
-        filename = std::string(argv[1]);
+        filename = save_path + "/" + std::string(argv[1]);
 
         if (argc == 3 && std::string(argv[2]) == "texture")
         {
