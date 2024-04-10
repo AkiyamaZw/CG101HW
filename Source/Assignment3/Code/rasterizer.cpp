@@ -291,6 +291,16 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t, const std::array<Eig
     // float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
     // float zp = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
     // zp *= Z;
+    auto calc_shader_color = [&](float alpha, float beta, float gamma)->Eigen::Vector3f{
+        auto interpolated_color = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1.f);
+        auto interpolated_normal = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1.f);
+        auto interpolated_uv = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1.f);
+        norm_uv(interpolated_uv);
+        auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1.f);
+        fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_uv, texture ? &*texture : nullptr);
+        payload.view_pos = interpolated_shadingcoords;
+        return fragment_shader(payload);
+    };
 
     auto normal_raster_pixel = [&](int x, int y){
         float idx_x = x + 0.5f;
@@ -306,26 +316,76 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t, const std::array<Eig
             int index = get_index(x, y);
             if(z_interpolated < depth_buf[index])
             {
-                auto interpolated_color = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1.f);
-                auto interpolated_normal = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1.f);
-
-                auto interpolated_uv = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1.f);
-                norm_uv(interpolated_uv);
-                auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1.f);
-                fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_uv, texture ? &*texture : nullptr);
-                payload.view_pos = interpolated_shadingcoords;
-                auto color = fragment_shader(payload);
+                // auto interpolated_color = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1.f);
+                // auto interpolated_normal = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1.f);
+                // auto interpolated_uv = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1.f);
+                // norm_uv(interpolated_uv);
+                // auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1.f);
+                // fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_uv, texture ? &*texture : nullptr);
+                // payload.view_pos = interpolated_shadingcoords;
+                auto color = calc_shader_color(alpha, beta, gamma);
                 set_pixel({x*1.0f, y*1.0f}, color);
                 depth_buf[index] = z_interpolated;
             }
         }
     };
 
+    auto msaa_2x2_raster_pixel = [&](int x, int y){
+        float steps_x[2] = {0.25f, 0.75f};
+        float steps_y[2] = {0.25f, 0.75f};
+        float idx_x = x , idx_y = y;
+        int index = get_index(x, y) * 4;
+        const float depth_max = std::numeric_limits<float>::infinity();
+        float min_depth = depth_max;
+
+        for(int i = 0; i< 2; ++i)
+        {
+            idx_x = steps_x[i] + x;
+            for(int j = 0; j < 2; ++j)
+            {
+                idx_y = steps_y[j] + y;
+                if(insideTriangle(idx_x, idx_y, t.v)){
+                    auto [alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+                    float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    z_interpolated *= w_reciprocal;
+
+                    int buff_index = index + i * 2 + j;
+                    if(z_interpolated < depth_buf_msaa[buff_index])
+                    {
+                        depth_buf_msaa[buff_index] = z_interpolated;
+                        frame_buf_msaa[buff_index] = 0.25 * calc_shader_color(alpha, beta, gamma);
+                        if(z_interpolated < min_depth)
+                        {
+                            min_depth = z_interpolated;
+                        }
+                    }
+                }
+            }
+        }
+        if(min_depth != depth_max){
+            Vector3f color = frame_buf_msaa[index] + frame_buf_msaa[index+1] + frame_buf_msaa[index+2] + frame_buf_msaa[index+3];
+            int pixel_index = get_index(x, y);
+            if(min_depth < depth_buf[pixel_index])
+            {
+                depth_buf[pixel_index] = min_depth;
+            }
+            set_pixel({x, y}, color);
+        }
+    };
+
+    bool enable_msaa = false;
     for(int x = min_x; x<=max_x; ++x)
     {
         for(int y = min_y; y <= max_y; ++y)
         {
-            normal_raster_pixel(x, y);
+            if(enable_msaa)
+            {
+                msaa_2x2_raster_pixel(x, y);
+            }
+            else{
+                normal_raster_pixel(x, y);
+            }
         }
     }
 
@@ -369,13 +429,23 @@ void rst::rasterizer::clear(rst::Buffers buff)
     {
         std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
     }
+    // msaa special
+    if((buff & rst::Buffers::Color) == rst::Buffers::Color)
+    {
+        std::fill(frame_buf_msaa.begin(), frame_buf_msaa.end(), Eigen::Vector3f{0, 0, 0});
+    }
+     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
+    {
+        std::fill(depth_buf_msaa.begin(), depth_buf_msaa.end(), std::numeric_limits<float>::infinity());
+    }
 }
 
 rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
     depth_buf.resize(w * h);
-
+    frame_buf_msaa.resize(h * w * 4);
+    depth_buf_msaa.resize(w * h * 4);
     texture = std::nullopt;
 }
 

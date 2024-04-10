@@ -2,7 +2,7 @@
 
 *学而不思则罔, 思而不学则殆。--《论语》*
 
-**建议先思考，再看下面内容**
+**正确答案只有一个，但是错误可以千千万万。下面仅记录了我遇到过的问题，如有雷同，那恭喜我们是同样的bug。**
 
 
 ## 作业0 & 作业1
@@ -39,3 +39,10 @@
         }
     };
   ```
+
+  ## 作业3
+  > <img src="./hw3normal.png" width = "25%" height = "25%" alt="渲染法线" align=center />&emsp;<img src="./hw3phong.png" width = "25%" height = "25%" alt="渲染布林冯光照模型" align=center />&emsp;<img src="./hw3texture.png" width = "25%" height = "25%" alt="光照模型和纹理" align=center />&emsp;<p><img src="./hw3bump.png" width = "25%" height = "25%" alt="渲染bump纹理" align=center />&emsp;<img src="./hw3dispacement.png" width = "25%" height = "25%" alt="displace纹理" align=center /><p>
+图示: 图1:法线；图2:布林冯光照模型；图3:带纹理的光照模型; 图4:bump纹理; 图5:displacement纹理。
+
+1. Displacement纹理渲染结果与渲染图不同？
+  * 遇到的主要问题是渲染出displacement纹理的效果会表面更加粗糙？在原始的实现中，**displacement_fragment_shader**中先计算normal，后更新point的位置。point的更新中，normal也参与计算。而normal通过bump贴图更新值后，相当于对normal做了一次"扰乱"，用更新后的normal去更新point, 则使得模型渲染观感更加"粗糙"。由此，可以推测bump贴图做了两件事:改变顶点的逻辑位置(原本网格中不变)；改变顶点法线。

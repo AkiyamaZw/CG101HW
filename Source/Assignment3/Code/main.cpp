@@ -102,6 +102,31 @@ struct light
     Eigen::Vector3f intensity;
 };
 
+struct PhongData
+{
+    Eigen::Vector3f ka;
+    Eigen::Vector3f kd;
+    Eigen::Vector3f ks;
+    float specular_power;
+    Eigen::Vector3f view_dir;
+    Eigen::Vector3f light_dir;
+    Eigen::Vector3f normal;
+    float light_distance_square;
+    Eigen::Vector3f amb_light_intensity;
+};
+
+void _phong_process(const PhongData& params, Eigen::Vector3f& result_color, const light& light)
+{
+    Eigen::Vector3f l = params.light_dir.normalized();
+    Eigen::Vector3f h = (l + params.view_dir).normalized();
+
+    auto aimbient = params.ka.cwiseProduct(params.amb_light_intensity);
+    auto diffuse = params.kd.cwiseProduct(light.intensity / params.light_distance_square * std::max(0.f, params.normal.dot(l)));
+    auto specular = params.ks.cwiseProduct(light.intensity / params.light_distance_square * std::pow(std::max(0.f, params.normal.normalized().dot(h)), params.specular_power));
+
+    result_color += aimbient + diffuse + specular;
+}
+
 Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload& payload)
 {
     Eigen::Vector3f return_color = {0, 0, 0};
@@ -133,21 +158,16 @@ Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload& payload)
 
     Eigen::Vector3f result_color = {0, 0, 0};
 
+    Eigen::Vector3f v = (eye_pos - point).normalized();
     for (auto& light : lights)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // components are. Then, accumulate that result on the *result_color* object.
-        Eigen::Vector3f l = light.position - point;
-        Eigen::Vector3f v = eye_pos - point;
-        Eigen::Vector3f h = (l + v).normalized();
-        // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
-        // components are. Then, accumulate that result on the *result_color* object.
-        auto aimbient = ka.cwiseProduct(amb_light_intensity);
-        auto diffuse = kd.cwiseProduct(light.intensity / l.dot(l))* std::max(0.f, l.normalized().dot(normal.normalized()));
-        auto specular = ks.cwiseProduct(light.intensity / l.dot(l)) * std::powf(std::max(0.f, h.dot(normal.normalized())), p);
-
-        result_color += aimbient + diffuse + specular;
-
+        PhongData phone{ka, kd, ks, p, (eye_pos-point).normalized(),
+                        (light.position - point).normalized(), normal.normalized(),
+                        (light.position-point).squaredNorm(),
+                        amb_light_intensity};
+        _phong_process(phone, result_color, light);
     }
 
     return result_color * 255.f;
@@ -175,22 +195,38 @@ Eigen::Vector3f phong_fragment_shader(const fragment_shader_payload& payload)
     Eigen::Vector3f result_color = {0, 0, 0};
     for (auto& light : lights)
     {
-        Eigen::Vector3f l = light.position - point;
-        Eigen::Vector3f v = eye_pos - point;
-        Eigen::Vector3f h = (l + v).normalized();
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
-        // components are. Then, accumulate that result on the *result_color* object.
-        auto aimbient = ka.cwiseProduct(amb_light_intensity);
-        auto diffuse = kd.cwiseProduct(light.intensity / l.dot(l))* std::max(0.f, l.normalized().dot(normal.normalized()));
-        auto specular = ks.cwiseProduct(light.intensity / l.dot(l)) * std::powf(std::max(0.f, h.dot(normal.normalized())), p);
-
-        result_color += aimbient + diffuse + specular;
+        PhongData phone{ka, kd, ks, p, (eye_pos-point).normalized(),
+                        (light.position - point).normalized(), normal.normalized(),
+                        (light.position-point).squaredNorm(),
+                        amb_light_intensity};
+        _phong_process(phone, result_color, light);
     }
 
     return result_color * 255.f;
 }
 
+void _bump_process(Eigen::Vector3f& normal, const fragment_shader_payload& payload, float kh, float kn)
+{
+    Eigen::Vector3f n = normal;
+    float x = n.x(), y = n.y(), z = n.z();
+    float u = payload.tex_coords.x(), v = payload.tex_coords.y();
+    float w = payload.texture->width, h = payload.texture->height;
+    float temp = sqrt(x*x + z*z);
+    Eigen::Vector3f t{x * y / temp, temp, z*y/temp};
+    Eigen::Vector3f b = n.cross(t);
 
+    Eigen::Matrix3f TBN;
+    TBN <<  t.x(), b.x(), n.x(),
+            t.y(), b.y(), n.y(),
+            t.z(), b.z(), n.z();
+
+    temp = payload.texture->getColor(u, v).norm();
+    float du = kh * kn * (payload.texture->getColor(u+1.0f/ w, v).norm() - temp);
+    float dv = kh * kn * (payload.texture->getColor(u, v+1.0f / h).norm() - temp);
+    Eigen::Vector3f ln {-du, -dv, 1};
+    normal = (TBN * ln).normalized();
+}
 
 Eigen::Vector3f displacement_fragment_shader(const fragment_shader_payload& payload)
 {
@@ -214,26 +250,23 @@ Eigen::Vector3f displacement_fragment_shader(const fragment_shader_payload& payl
 
     float kh = 0.2, kn = 0.1;
 
+    // special
+    point += kn * normal * payload.texture->getColor(payload.tex_coords.x(), payload.tex_coords.y()).norm();
+
     // TODO: Implement displacement mapping here
-    // Let n = normal = (x, y, z)
-    // Vector t = (x*y/sqrt(x*x+z*z),sqrt(x*x+z*z),z*y/sqrt(x*x+z*z))
-    // Vector b = n cross product t
-    // Matrix TBN = [t b n]
-    // dU = kh * kn * (h(u+1/w,v)-h(u,v))
-    // dV = kh * kn * (h(u,v+1/h)-h(u,v))
-    // Vector ln = (-dU, -dV, 1)
-    // Position p = p + kn * n * h(u,v)
-    // Normal n = normalize(TBN * ln)
+    _bump_process(normal, payload, kh, kn);
 
 
     Eigen::Vector3f result_color = {0, 0, 0};
-
     for (auto& light : lights)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // components are. Then, accumulate that result on the *result_color* object.
-
-
+        PhongData phone{ka, kd, ks, p, (eye_pos-point).normalized(),
+                        (light.position - point).normalized(), normal.normalized(),
+                        (light.position-point).squaredNorm(),
+                        amb_light_intensity};
+        _phong_process(phone, result_color, light);
     }
 
     return result_color * 255.f;
@@ -272,7 +305,7 @@ Eigen::Vector3f bump_fragment_shader(const fragment_shader_payload& payload)
     // dV = kh * kn * (h(u,v+1/h)-h(u,v))
     // Vector ln = (-dU, -dV, 1)
     // Normal n = normalize(TBN * ln)
-
+    _bump_process(normal, payload, kh, kn);
 
     Eigen::Vector3f result_color = {0, 0, 0};
     result_color = normal;
@@ -349,7 +382,7 @@ int main(int argc, const char** argv)
         }
         else if (argc == 3 && std::string(argv[2]) == "displacement")
         {
-            std::cout << "Rasterizing using the bump shader\n";
+            std::cout << "Rasterizing using the displacement shader\n";
             active_shader = displacement_fragment_shader;
         }
     }
