@@ -17,4 +17,7 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment  0/代码框架")
 add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment1/代码框架")
 add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment2/代码框架")
 add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment3/Code")
+add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment4/Code")
+
+
 
