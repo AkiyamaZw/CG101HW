@@ -2,11 +2,10 @@
 
 *学而不思则罔, 思而不学则殆。--《论语》*
 
-**正确答案只有一个，但是错误可以千千万万。下面仅记录了我遇到过的问题，如有雷同，那恭喜我们是同样的bug。**
-
+**下面仅记录了我遇到过的问题。正确答案只有一个，但是错误可以千千万万。如有雷同，那恭喜我们是同样的bug。**
 
 ## 作业0 & 作业1
-  * 没有比较特殊的问题。
+  * 没有问题!
 
 ## 作业2
 > <img src="./hw2.png" width = "25%" height = "25%" alt="没有MSAA" align=center />&emsp;<img src="./hw2withblackbounder.png" width = "25%" height = "25%" alt="MSAA但有黑边" align=center />&emsp;<img src="./hw2massright.png" width = "25%" height = "25%" alt="MSAA正常" align=center /><p>
@@ -58,6 +57,8 @@
 > <img src="./hw5_out.png" width = "50%" height = "25%" alt="RayTracing" align=center />&emsp;<p>
 图示: 图1: 实验效果图
 
-1. 该节作业的实现关键点在于去理解作业中Render函数中scale的“隐藏含义”：它默认zNear(近平面距离)是1.0f。然后，配合虎书第四章理解世界空间中像素位置x,y(虎书中记为u,v)的计算方法即可。
-2. 得知x,y计算方法后，作出结果可能是上下颠倒的。请注意，这里的颠倒造成的原因(我认为)是与framebuffer的使用方式有关，即framebuffer导出的ppm图片的坐标原点在左上角(从左至右，从上至下)，而虎书中假设像素空间的原点在左下角。
+1. 如何计算世界空间像素点坐标和方向？
+* 该节作业的实现关键点在于去理解作业中Render函数中scale的“隐藏含义”：它默认zNear(近平面距离)是1.0f。然后，配合虎书第四章理解世界空间中像素位置x,y(虎书中记为u,v)的计算方法即可。
+2. 得知x,y计算方法后，作出结果可能是上下颠倒的？
+* 请注意，这里的颠倒造成的原因(我认为)是与framebuffer的使用方式有关，即framebuffer导出的ppm图片的坐标原点在左上角(从左至右，从上至下)，而虎书中假设像素空间的原点在左下角。
 

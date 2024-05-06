@@ -1,5 +1,5 @@
 # CG101HW
-这个仓库记录了Games101课程的作业，旨在记录学习的过程，积累学习经验。答案仅匹配网上效果图。
+这个仓库记录了Games101课程的作业，旨在记录学习的过程，积累学习经验。答案仅匹配效果图。
 
 ## Requirement
 * CMake >= 3.6
@@ -11,8 +11,8 @@ Go to the root directory of the repository，and input the following command on 
 2. cmake ..
 3. cmake --build .
 
-All the executable file will be compiled and placed under the "bin" folder. That's all, just enjoy the Computer Graphic tutorial.
+All the executable file will be compiled and placed under the "bin" folder. That's all, just enjoy the [Computer Graphic tutorial](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html).
 
 ## Summary Note
-* [📖 ticky note](./doc/Note.md) records some traps of CG Homework I met.
+* [📖 ticky note](./doc/Note.md) records some traps in CG Homework I met.
 
