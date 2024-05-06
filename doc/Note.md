@@ -48,14 +48,14 @@
   * 遇到的主要问题是渲染出displacement纹理的效果会表面更加粗糙？在原始的实现中，**displacement_fragment_shader**中先计算normal，后更新point的位置。point的更新中，normal也参与计算。而normal通过bump贴图更新值后，相当于对normal做了一次"扰乱"，用更新后的normal去更新point, 则使得模型渲染观感更加"粗糙"。由此，可以推测bump贴图做了两件事:改变顶点的逻辑位置(原本网格中不变)；改变顶点法线。
 
 ## 作业4
-> <img src="./hw4_1.png" width = "25%" height = "25%" alt="贝塞尔曲线" align=center />&emsp; <img src="./hw4_2.png" width = "25%" height = "25%" alt="抗锯齿" align=center />&emsp;
+> <img src="./hw4_1.png" width = "25%" height = "25%" alt="贝塞尔曲线" align=center />&emsp; <img src="./hw4_2.png" width = "25%" height = "25%" alt="抗锯齿" align=center />&emsp;<p>
 图示: 图1: 贝塞尔曲线，图2: 效果不是很好的贝塞尔曲线抗锯齿
 
 1. 如何做贝塞尔曲线的抗锯齿？
 * [todo] 尝试了一些办法，但尚未找到一个比较好的方式。
 
 ## 作业5
-> <img src="./hw5_out.png" width = "50%" height = "25%" alt="RayTracing" align=center />&emsp;
+> <img src="./hw5_out.png" width = "50%" height = "25%" alt="RayTracing" align=center />&emsp;<p>
 图示: 图1: 实验效果图
 
 1. 该节作业的实现关键点在于去理解作业中Render函数中scale的“隐藏含义”：它默认zNear(近平面距离)是1.0f。然后，配合虎书第四章理解世界空间中像素位置x,y(虎书中记为u,v)的计算方法即可。
