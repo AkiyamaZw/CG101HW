@@ -6,3 +6,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/HW6.h.in" "${CMAKE_CURRENT_SOURCE_DI
 add_executable(RayTracingHW6 main.cpp Object.hpp Vector.cpp Vector.hpp Sphere.hpp global.hpp Triangle.hpp Scene.cpp
         Scene.hpp Light.hpp AreaLight.hpp BVH.cpp BVH.hpp Bounds3.hpp Ray.hpp Material.hpp Intersection.hpp
         Renderer.cpp Renderer.hpp)
+
+target_compile_options(RayTracingHW6 PUBLIC -Wall -Wextra -pedantic -Wshadow -Wreturn-type -fsanitize=undefined)
+target_compile_features(RayTracingHW6 PUBLIC cxx_std_17)
+target_link_libraries(RayTracingHW6 PUBLIC -fsanitize=undefined)

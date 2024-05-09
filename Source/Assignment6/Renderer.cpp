@@ -3,7 +3,11 @@
 //
 
 #include "Renderer.hpp"
+#include "HW6.h"
+#include "Ray.hpp"
 #include "Scene.hpp"
+#include "Vector.hpp"
+#include <filesystem>
 #include <fstream>
 
 inline float deg2rad(const float &deg) { return deg * M_PI / 180.0; }
@@ -33,13 +37,16 @@ void Renderer::Render(const Scene &scene) {
       // *scale*, and x (horizontal) variable with the *imageAspectRatio*
 
       // Don't forget to normalize this direction!
+      Ray ray(eye_pos, normalize(Vector3f(x, y, -1)), 0);
+      framebuffer[m++] = scene.castRay(ray, 0);
     }
     UpdateProgress(j / (float)scene.height);
   }
   UpdateProgress(1.f);
 
   // save framebuffer to file
-  FILE *fp = fopen("binary.ppm", "wb");
+  std::filesystem::path save_path = std::string(OUT_DIR) + "hw6_out.ppm";
+  FILE *fp = fopen(save_path.c_str(), "wb");
   (void)fprintf(fp, "P6\n%d %d\n255\n", scene.width, scene.height);
   for (auto i = 0; i < scene.height * scene.width; ++i) {
     static unsigned char color[3];

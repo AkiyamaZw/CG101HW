@@ -62,3 +62,48 @@
 2. 得知x,y计算方法后，作出结果可能是上下颠倒的？
 * 请注意，这里的颠倒造成的原因(我认为)是与framebuffer的使用方式有关，即framebuffer导出的ppm图片的坐标原点在左上角(从左至右，从上至下)，而虎书中假设像素空间的原点在左下角。
 
+
+## 作业6
+> <img src="./hw6_out.png" width = "25%" height = "25%" alt="RayTracing" align=center />&emsp;<img src="./bvh_time.png" width = "25%" height = "50%" alt="RayTracing" align=center /><p>
+图示: 图1: BVH加速渲染效果图, 图2:BVH运行时间
+
+1. 作业6相对有更多的一些算法涉及，这里顺序列出涉及到的过程和算法。
+* 创建一个场景，载入模型，设置灯光
+* 设置场景的BVH。
+  * [算法]构造BVH结构
+* 遍历所有像素
+  * 当前像素生成一条射线ray
+  * 求场景与ray的交点
+    * [算法]BVH结构加速求射线与场景中对象的交点
+      * [算法]BoundBox与射线是否有交点
+      * [算法]射线与三角形求交点
+  * 求交点处光照模型像素值
+* 保存所有像素点处像素，导出成PPM
+
+2. 能画出效果图，但是耗时大于80s(任意很大的值)？
+* 通常BVH实验运行时间应该不会大于10s(特别老的CPU不能保证)。效果图能出说明射线求交等部分没有问题，问题可能出在递归BVH求交点的部分, 即**BVHAccel::getIntersection**函数。如果耗时非常大，说明BVH并没有起到加速作用，注意排查递归出口。下面是我犯的低级错误😭, 发现问题了吗？
+```c++
+Intersection BVHAccel::getIntersection(BVHBuildNode *node,
+                                       const Ray &ray) const {
+  // TODO Traverse the BVH to find intersection
+
+  // recursive exit。
+  // error: use root node to check ray&BoundingBox Intersection. BVH does't work in fact.
+  // please using "node" to instead "root".
+  if (node == nullptr || !root->bounds.IntersectP(ray, ray.direction_inv,
+                                                  {int(ray.direction.x < 0),
+                                                   int(ray.direction.y < 0),
+                                                   int(ray.direction.z < 0)}))
+    return {};
+
+  // leave node ray&object intersection check
+  if (node->left == nullptr && node->right == nullptr) {
+    return node->object->getIntersection(ray);
+  }
+
+  // recursive part
+  auto left_inter = getIntersection(node->left, ray);
+  auto right_inter = getIntersection(node->right, ray);
+  return left_inter.distance < right_inter.distance ? left_inter : right_inter;
+```
+
