@@ -66,7 +66,7 @@
 ## 作业6
 > <img src="./hw6_native_out.png" width = "25%" height = "25%" alt="RayTracing" align=center />&emsp;<img src="./bvh_time.png" width = "50%" height = "50%" alt="RayTracing" align=center />
 > <img src="./hw6_sah_out.png" width = "25%" height = "25%" alt="RayTracing" align=center />&emsp;<img src="./sah_time.png" width = "50%" height = "50%" alt="RayTracing" align=center /><p>
-图示: 图1: BVH加速渲染效果图, 图2:BVH运行时间(DEBUG模式), 图3: BVH(SAH构建)效果图, 图4: BVH(SAH构建)运行时间(DEBUG模式)
+图示: 图1: BVH加速渲染效果图;图2:BVH运行时间(DEBUG模式); 图3: BVH(SAH构建)效果图; 图4: BVH(SAH构建)运行时间(DEBUG模式)
 
 0. 作业6相对有更多的一些算法涉及，这里顺序列出涉及到的过程和算法。
 * 创建一个场景，载入模型，设置灯光
@@ -118,7 +118,7 @@ Intersection BVHAccel::getIntersection(BVHBuildNode *node,
   return left_inter.distance < right_inter.distance ? left_inter : right_inter;
 ```
 
-2. 关于SAH算法, 实现方法有几种，效果在这个实验下会比 BVH NAIVE构建方式快上1秒左右。这个知识点的扩展比较关注的是为什么BVH NAIVE的构建方式的缺点，以及SAH相比它的优点在哪里。此[文章](https://zhuanlan.zhihu.com/p/50720158)分析了BVH构建方式的优缺点，值得一看。
-* 感官上的认识:一种好的划分要满足包围盒紧致。包围盒如果没那么紧致，射线有更大的几率与其相交，使得递归去检查子树上的相交关系，尽管可能其内部并没有与射线相交，相当于耗时。采用数量均分，或者坐标轴中点的划分方式只考虑包围盒在空间中的"均匀“划分，但是这种划分是不考虑边界关系的，也就是容易出现包围盒节点范围偏大，容易造成包围盒边界相交的情况。SAH的好处自然是考虑了边界的做法，所谓SAH计算的损失函数中就包括了子包围盒面积与父包围盒面基的比值，作为一种边界“紧致”的衡量方式。
+2. 关于SAH算法, 实现方法有几种，效果在这个实验下会比 BVH NAIVE构建方式快上1秒左右。这个知识点的扩展比较关注的是BVH NAIVE的构建方式的缺点，以及SAH相比它的优点在哪里。此[文章](https://zhuanlan.zhihu.com/p/50720158)分析了BVH构建方式的优缺点，值得一看。
+* 感官上的认识:一种好的划分要满足包围盒紧致。包围盒如果没那么紧致，射线有更大的几率与其相交，使得递归去检查子树上的相交关系，尽管可能其内部并没有与射线相交，仅仅浪费计算资源。采用数量均分，或者坐标轴中点的划分方式只考虑包围盒在空间中的"均匀“划分，但是这种划分是不考虑边界关系的，也就是容易出现包围盒节点范围偏大，容易造成包围盒边界相交的情况。SAH的好处自然是考虑了边界的做法，所谓SAH计算的损失函数中就包括了子包围盒面积与父包围盒面基的比值，作为一种边界“紧致”的衡量方式。
 
 
