@@ -6,6 +6,8 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <limits>
+#include <vector>
 
 BVHAccel::BVHAccel(std::vector<Object *> p, int maxPrimsInNode,
                    SplitMethod splitMethod)
@@ -50,11 +52,11 @@ BVHBuildNode *BVHAccel::recursiveBuild(std::vector<Object *> objects) {
     node->bounds = Union(node->left->bounds, node->right->bounds);
     return node;
   } else {
-    Bounds3 centroidBounds;
-    for (int i = 0; i < objects.size(); ++i)
-      centroidBounds =
-          Union(centroidBounds, objects[i]->getBounds().Centroid());
     if (splitMethod == SplitMethod::NAIVE) {
+      Bounds3 centroidBounds;
+      for (int i = 0; i < objects.size(); ++i)
+        centroidBounds =
+            Union(centroidBounds, objects[i]->getBounds().Centroid());
       int dim = centroidBounds.maxExtent();
       switch (dim) {
       case 0:
@@ -97,46 +99,58 @@ BVHBuildNode *BVHAccel::recursiveBuild(std::vector<Object *> objects) {
   return node;
 }
 
-struct SAHBucket {
-  float end_split{0};
-  Bounds3 bounds;
-  int prim_count{0};
-};
-
 void BVHAccel::BuildSAH(std::vector<Object *> objects, BVHBuildNode *node) {
-  return;
-  Bounds3 bounds;
-  for (int i = 0; i < objects.size(); ++i)
-    bounds = Union(bounds, objects[i]->getBounds());
-
   const int BacketCount = 8;
-  std::array<SAHBucket, BacketCount> backets;
+  const float t_const = 0.125f;
+  std::array<float, BacketCount - 1> splits;
 
-  auto compute_bucket = [](const Vector3f &centroid, int index,
-                           std::array<SAHBucket, BacketCount> &backets) {
-    for (int i = 0; i < BacketCount; ++i) {
-      if (backets[i].end_split > centroid[index]) {
-        return i;
-      }
+  Bounds3 centroidBounds;
+  for (int i = 0; i < objects.size(); ++i)
+    centroidBounds = Union(centroidBounds, objects[i]->getBounds().Centroid());
+  int dim = centroidBounds.maxExtent();
+
+  for (int i = 0; i < BacketCount - 1; i++) {
+    splits[i] = (i + 1) *
+                    (centroidBounds.pMax[dim] - centroidBounds.pMin[dim]) /
+                    (BacketCount - 1) +
+                centroidBounds.pMin[dim];
+  }
+
+  // split along with the wider axis
+  float min_cost = std::numeric_limits<float>::max();
+  int min_backet = 0;
+  std::vector<Object *>::iterator min_left_end_iter = objects.end();
+  for (int i = 0; i < BacketCount - 1; i++) {
+    float split_plane = splits[i];
+    auto left_end = std::partition(
+        objects.begin(), objects.end(), [dim, split_plane](auto f1) {
+          return f1->getBounds().Centroid()[dim] < split_plane;
+        });
+    Bounds3 left_bounds, right_bounds;
+    for (auto it = objects.begin(); it != left_end; it++) {
+      left_bounds = Union(left_bounds, (*it)->getBounds().Centroid());
     }
-    return BacketCount - 1;
-  };
-
-  for (int i = 0; i < 3; i++) {
-    // init backet
-    for (int j = 0; j < BacketCount; ++j) {
-      backets[j] = SAHBucket();
-      backets[j].end_split = bounds.pMin.x + (bounds.pMax.x - bounds.pMin.x) *
-                                                 (j + 1.f) / BacketCount;
+    for (auto it = left_end; it != objects.end(); it++) {
+      right_bounds = Union(right_bounds, (*it)->getBounds().Centroid());
     }
-
-    for (auto obj : objects) {
-      int b = compute_bucket(obj->getBounds().Centroid(), i, backets);
-      backets[b].bounds = Union(backets[b].bounds, obj->getBounds());
-      backets[b].prim_count++;
+    float cost =
+        t_const + (left_bounds.SurfaceArea() * (left_end - objects.begin()) +
+                   right_bounds.SurfaceArea() * (objects.end() - left_end)) /
+                      centroidBounds.SurfaceArea();
+    if (cost < min_cost) {
+      min_cost = cost;
+      min_left_end_iter = left_end;
     }
   }
+
+  auto left_shapes = std::vector<Object *>(objects.begin(), min_left_end_iter);
+  auto right_shapes = std::vector<Object *>(min_left_end_iter, objects.end());
+  assert(objects.size() == left_shapes.size() + right_shapes.size());
+  node->left = recursiveBuild(left_shapes);
+  node->right = recursiveBuild(right_shapes);
+  node->bounds = Union(node->left->bounds, node->right->bounds);
 }
+
 Intersection BVHAccel::Intersect(const Ray &ray) const {
   Intersection isect;
   if (!root)
@@ -160,7 +174,7 @@ Intersection BVHAccel::getIntersection(BVHBuildNode *node,
     return node->object->getIntersection(ray);
   }
 
-  // recursive part
+  // recursive _
   auto left_inter = getIntersection(node->left, ray);
   auto right_inter = getIntersection(node->right, ray);
   return left_inter.distance < right_inter.distance ? left_inter : right_inter;

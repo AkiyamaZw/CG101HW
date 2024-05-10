@@ -70,7 +70,8 @@ public:
 
 class MeshTriangle : public Object {
 public:
-  MeshTriangle(const std::string &filename) {
+  MeshTriangle(const std::string &filename,
+               BVHAccel::SplitMethod method = BVHAccel::SplitMethod::NAIVE) {
     objl::Loader loader;
     loader.LoadFile(filename);
 
@@ -116,7 +117,7 @@ public:
     for (auto &tri : triangles)
       ptrs.push_back(&tri);
 
-    bvh = new BVHAccel(ptrs);
+    bvh = new BVHAccel(ptrs, 1, method);
   }
 
   bool intersect(const Ray &ray) { return true; }

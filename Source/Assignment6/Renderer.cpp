@@ -3,6 +3,7 @@
 //
 
 #include "Renderer.hpp"
+#include "BVH.hpp"
 #include "HW6.h"
 #include "Ray.hpp"
 #include "Scene.hpp"
@@ -45,7 +46,10 @@ void Renderer::Render(const Scene &scene) {
   UpdateProgress(1.f);
 
   // save framebuffer to file
-  std::filesystem::path save_path = std::string(OUT_DIR) + "hw6_out.ppm";
+  std::string filename = scene.bvh->splitMethod == BVHAccel::SplitMethod::NAIVE
+                             ? "hw6_native_out.ppm"
+                             : "hw6_sah_out.ppm";
+  std::filesystem::path save_path = std::string(OUT_DIR) + filename;
   FILE *fp = fopen(save_path.c_str(), "wb");
   (void)fprintf(fp, "P6\n%d %d\n255\n", scene.width, scene.height);
   for (auto i = 0; i < scene.height * scene.width; ++i) {

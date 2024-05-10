@@ -3,10 +3,15 @@
 //
 
 #include "Scene.hpp"
+#include "BVH.hpp"
+#include <cstdio>
 
-void Scene::buildBVH() {
-  printf(" - Generating BVH...\n\n");
-  this->bvh = new BVHAccel(objects, 1, BVHAccel::SplitMethod::NAIVE);
+void Scene::buildBVH(BVHAccel::SplitMethod method) {
+  if (method == BVHAccel::SplitMethod::NAIVE)
+    printf(" - Generating BVH with native method...\n\n");
+  else
+    printf(" - Generaring BVH with SAH method...\n\n");
+  this->bvh = new BVHAccel(objects, 1, method);
 }
 
 Intersection Scene::intersect(const Ray &ray) const {
