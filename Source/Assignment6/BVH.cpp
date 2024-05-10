@@ -1,4 +1,5 @@
 #include "BVH.hpp"
+#include "Bounds3.hpp"
 #include "Intersection.hpp"
 #include "Vector.hpp"
 #include <algorithm>
@@ -53,43 +54,89 @@ BVHBuildNode *BVHAccel::recursiveBuild(std::vector<Object *> objects) {
     for (int i = 0; i < objects.size(); ++i)
       centroidBounds =
           Union(centroidBounds, objects[i]->getBounds().Centroid());
-    int dim = centroidBounds.maxExtent();
-    switch (dim) {
-    case 0:
-      std::sort(objects.begin(), objects.end(), [](auto f1, auto f2) {
-        return f1->getBounds().Centroid().x < f2->getBounds().Centroid().x;
-      });
-      break;
-    case 1:
-      std::sort(objects.begin(), objects.end(), [](auto f1, auto f2) {
-        return f1->getBounds().Centroid().y < f2->getBounds().Centroid().y;
-      });
-      break;
-    case 2:
-      std::sort(objects.begin(), objects.end(), [](auto f1, auto f2) {
-        return f1->getBounds().Centroid().z < f2->getBounds().Centroid().z;
-      });
-      break;
+    if (splitMethod == SplitMethod::NAIVE) {
+      int dim = centroidBounds.maxExtent();
+      switch (dim) {
+      case 0:
+        std::sort(objects.begin(), objects.end(), [](auto f1, auto f2) {
+          return f1->getBounds().Centroid().x < f2->getBounds().Centroid().x;
+        });
+        break;
+      case 1:
+        std::sort(objects.begin(), objects.end(), [](auto f1, auto f2) {
+          return f1->getBounds().Centroid().y < f2->getBounds().Centroid().y;
+        });
+        break;
+      case 2:
+        std::sort(objects.begin(), objects.end(), [](auto f1, auto f2) {
+          return f1->getBounds().Centroid().z < f2->getBounds().Centroid().z;
+        });
+        break;
+      }
+
+      auto beginning = objects.begin();
+      auto middling = objects.begin() + (objects.size() / 2);
+      auto ending = objects.end();
+
+      auto leftshapes = std::vector<Object *>(beginning, middling);
+      auto rightshapes = std::vector<Object *>(middling, ending);
+
+      assert(objects.size() == (leftshapes.size() + rightshapes.size()));
+
+      node->left = recursiveBuild(leftshapes);
+      node->right = recursiveBuild(rightshapes);
+
+      node->bounds = Union(node->left->bounds, node->right->bounds);
+    } else if (splitMethod == SplitMethod::SAH) {
+      BuildSAH(objects, node);
+    } else {
+      assert(false);
     }
-
-    auto beginning = objects.begin();
-    auto middling = objects.begin() + (objects.size() / 2);
-    auto ending = objects.end();
-
-    auto leftshapes = std::vector<Object *>(beginning, middling);
-    auto rightshapes = std::vector<Object *>(middling, ending);
-
-    assert(objects.size() == (leftshapes.size() + rightshapes.size()));
-
-    node->left = recursiveBuild(leftshapes);
-    node->right = recursiveBuild(rightshapes);
-
-    node->bounds = Union(node->left->bounds, node->right->bounds);
   }
 
   return node;
 }
 
+struct SAHBucket {
+  float end_split{0};
+  Bounds3 bounds;
+  int prim_count{0};
+};
+
+void BVHAccel::BuildSAH(std::vector<Object *> objects, BVHBuildNode *node) {
+  return;
+  Bounds3 bounds;
+  for (int i = 0; i < objects.size(); ++i)
+    bounds = Union(bounds, objects[i]->getBounds());
+
+  const int BacketCount = 8;
+  std::array<SAHBucket, BacketCount> backets;
+
+  auto compute_bucket = [](const Vector3f &centroid, int index,
+                           std::array<SAHBucket, BacketCount> &backets) {
+    for (int i = 0; i < BacketCount; ++i) {
+      if (backets[i].end_split > centroid[index]) {
+        return i;
+      }
+    }
+    return BacketCount - 1;
+  };
+
+  for (int i = 0; i < 3; i++) {
+    // init backet
+    for (int j = 0; j < BacketCount; ++j) {
+      backets[j] = SAHBucket();
+      backets[j].end_split = bounds.pMin.x + (bounds.pMax.x - bounds.pMin.x) *
+                                                 (j + 1.f) / BacketCount;
+    }
+
+    for (auto obj : objects) {
+      int b = compute_bucket(obj->getBounds().Centroid(), i, backets);
+      backets[b].bounds = Union(backets[b].bounds, obj->getBounds());
+      backets[b].prim_count++;
+    }
+  }
+}
 Intersection BVHAccel::Intersect(const Ray &ray) const {
   Intersection isect;
   if (!root)
