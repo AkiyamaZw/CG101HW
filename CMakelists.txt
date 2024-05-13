@@ -20,6 +20,7 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment3/Code")
 add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment4/Code")
 add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment5/Code")
 add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment6")
+add_subdirectory("${CMAKE_SOURCE_DIR}/Source/Assignment7/Code")
 
 
 

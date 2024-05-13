@@ -122,3 +122,46 @@ Intersection BVHAccel::getIntersection(BVHBuildNode *node,
 * 感官上的认识:一种好的划分要满足包围盒紧致。包围盒如果没那么紧致，射线有更大的几率与其相交，使得递归去检查子树上的相交关系，尽管可能其内部并没有与射线相交，仅仅浪费计算资源。采用数量均分，或者坐标轴中点的划分方式只考虑包围盒在空间中的"均匀“划分，但是这种划分是不考虑边界关系的，也就是容易出现包围盒节点范围偏大，容易造成包围盒边界相交的情况。SAH的好处自然是考虑了边界的做法，所谓SAH计算的损失函数中就包括了子包围盒面积与父包围盒面基的比值，作为一种边界“紧致”的衡量方式。
 
 
+---
+
+## 作业7
+> <img src="./hw7_direct_spp_64.png" width = "40%" height = "40%" alt="RayTracing" align=center />&emsp;<img src="./hw7_global_spp_64.png" width = "40%" height = "40%" alt="RayTracing" align=center /><p>
+图示: 图1: PathTracing直接光照效果图, 图2:PathTracing全局光照效果图
+
+* 本章作业是我遇到过trick最多的一次，也是最开眼界的一章。重头戏当然时Render Equation。
+* 蒙特卡洛积分算定积分
+* 左轮手枪概率性放弃与概率期望的结合。
+
+1. 遇到效果图非常黑，只能勉强看到红色墙体。
+* 这个属于常见问题，很多人都有遇到。一般的做法就是把IntersectP函数中末尾return中的不等式添加等号，如下。
+```c++
+inline bool Bounds3::IntersectP(const Ray &ray, const Vector3f &invDir,
+                                const std::array<int, 3> &dirIsNeg) const
+{
+// 中间代码省略
+...
+
+return t_enter <= t_exit && t_exit >= 0;
+}
+```
+但是，why？boundingbox 有没有可能”高度“接近0，也就是所谓的boundingbox可能无法拥体积，比如墙壁，天花板。当某个轴上的bounding的非常小的时候，计算误差让t_enter与t_exit非常接近，导致有些检测没有通过，就好像向绿色墙壁射出的射线因为boundingbox检测没通过，就直接“穿”了过去，再也没有找到路径弹回到光源上。
+
+![比较脏的效果图](./hw7_spp_128.png)
+2. 如上图所示，效果图非常“脏”，有非常多的黑色噪点？
+* 解决办法，将检测反射点与光源间是否有遮挡物过程中，比较距离的阈值适当调整，比如0.001f，代码如下:
+```c++
+Vector3f Scene::castRay(const Ray &ray, int depth) const
+{
+// 中间代码省略
+...
+// there are no objects between light point to reflect point.
+  if (l_to_r_inter.distance - ws_dis > -global_args.epsilon) {
+    direct_color =
+        l_inter.emit * r_inter.m->eval(ray.direction, l_dir, r_inter.normal) *
+        dotProduct(r_inter.normal, l_dir) * dotProduct(l_inter.normal, -l_dir) /
+        (ws_dis * ws_dis) / (l_pdf);
+  }
+// 后续代码省略
+}
+```
+那么为什么我取0.00001f会得到比较"脏"的效果，改成0.001f能够适当缓解呢？用问题1相似的逻辑来解释就是误差，容忍度大容易被检测到满足条件(反射面与光面之间没有遮挡物)，倘若epsilon比较小，计算误差使得一部分直接光照“丢失”，使得效果图上的黑点颗粒状随机分布(似乎也看不出规律)。

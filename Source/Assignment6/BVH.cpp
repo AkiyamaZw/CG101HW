@@ -174,7 +174,7 @@ Intersection BVHAccel::getIntersection(BVHBuildNode *node,
     return node->object->getIntersection(ray);
   }
 
-  // recursive _
+  // recursive
   auto left_inter = getIntersection(node->left, ray);
   auto right_inter = getIntersection(node->right, ray);
   return left_inter.distance < right_inter.distance ? left_inter : right_inter;
